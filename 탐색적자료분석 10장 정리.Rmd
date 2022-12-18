@@ -1,0 +1,257 @@
+---
+title: "EDA 10장"
+author: "jinjewel"
+date: "2022-12-05"
+output: html_document
+---
+
+
+```{r cars}
+### 10장 이변량 자료 탐색
+
+### 이변량 산점도
+# 산점도( cor(x, y) ) : 이변량 자료 탐색에 있어 기초적 도구
+# cor(x, y)값이 같아도 분포가 다를수도 있음.
+set.seed(12345)
+x11()
+par(mfrow=c(2,2))
+#(a)
+x <- 5 + rnorm(50,0,1.5)
+y <- 0.9*(x-5)+sqrt(0.19)*rnorm(50,0,1.5)+5
+cor(x, y)
+plot(x, y, xlim=c(0,10), ylim=c(0,10))
+title(cor(x, y))
+#(b)
+x <- c(rnorm(30,3,1), rnorm(20,8,1)) 
+y <- c(rnorm(30,3,1), rnorm(20,8,1))
+cor(x, y)
+plot(x, y, xlim=c(0,10), ylim=c(0,10))
+title(cor(x, y))
+#(c)
+x <- sort(5+rnorm(50,0,1.75))
+y <- x
+x[50] <- 8 ; y[50] <- 2
+cor(x, y)
+plot(x, y, xlim=c(0,10), ylim=c(0,10))
+title(cor(x, y))
+#(d)
+x1 <- sort(5+rnorm(25, 0, 1.5))
+y1 <- x1 - 0.75
+x2 <- sort(5+rnorm(25, 0, 1.5))
+y2 <- x2 + 0.75
+x <- c(x1, x2)
+y <- c(y1, y2)
+cor(x, y)
+plot(x, y, xlim=c(0,10), ylim=c(0,10))
+title(cor(x, y))
+
+
+
+### 흐트림
+# 정수자료(격자자료)에서 산점도를 개선하고사 함. jitter 함수 사용
+x11()
+par(mfrow=c(1,1))
+plot(sample(1:10, 100, replace=T), sample(1:10, 100, replace=T), 
+     xlab="X", ylab="Y", main="Integer data example")
+
+
+## jitter 모의 실험
+x11()
+par(mfrow=c(2,2))
+#(a), (X, Y)좌표 설정 밑 그리기
+x <- rnorm(50)+5
+y <- rnorm(50)*0.6+(x-5)*0.8+5
+plot(x, y, xlim=c(1,9), ylim=c(1,9), main="(1)")
+#(b), 반올림(격자 모양)
+x1 <- round(x)
+y1 <- round(y)
+plot(x1, y1, xlim=c(1,9), ylim=c(1,9), main="(2)")
+#(c), noise 더하기
+x2 <- x1+runif(50, -0.5, 0.5)
+y2 <- y1+runif(50, -0.5, 0.5)
+plot(x2, y2, xlim=c(1,9), ylim=c(1,9), main="(3)")
+#(d), jitter 더하기
+x3 <- jitter(x1, amount=0.5) # amount값이 크면 흩어짐의 범위가 커진다.
+y3 <- jitter(y1, amount=0.5)
+plot(x3, y3, xlim=c(1,9), ylim=c(1,9), main="(4)")
+
+## 피지에서 발생한 지진의 기록
+# depth : 지표로부터의 깊이, mag : 지진강도, station : 측정소
+# mag 가 0.1 단위로 기록
+library(lattice)
+data(quakes)
+str(quakes)
+attach(quakes)
+x11()
+par(mfrow=c(1,2))
+plot(depth, mag)
+plot(depth, jitter(mag, factor=2))
+
+## depth의 구간별 mag 상자 그림
+x11()
+par(mfrow=c(1,1))
+depth.grp <- trunc(depth/100) # trunc
+boxplot(quakes$mag~depth.grp, ylab="magnitude", xlab="depth interva")
+
+
+
+### 부호 그래프, symbols()
+# x, y산점도에 제 3의 변수, z(부호)를 표현
+# 부호 그래프(circles), 나무 자료
+# Girth : 나무의 둘레, Height : 높이, Volume : 부피
+attach(trees)
+x11()
+par(mfrow=c(1,2))
+plot(Girth, Height, main="Trees' Girth vs Height")
+symbols(Girth, Height, circles=Volume, inches=0.2, main="Trees's volume")
+# 부호그래프(온도계 누금 부호 그래프)
+x11()
+par(mfrow=c(1,1))
+Rel.Height <- (Height-min(Height))/(max(Height)-min(Height))
+symbols(Girth, Volume, thermometers=cbind(0.5, 1, Rel.Height),
+        inches=0.2, main="Trees' Height")
+
+
+
+
+### 일변량 밀도 추정
+# X : geyser의 분출 지속시간(duration)
+library(MASS)
+data(geyser)
+str(geyser)
+attach(geyser)
+## hist 
+# m번째 bin(구간)(초과,이하) : [X0+(m-1)h,X0+mh], X0 : min값 , h : bandwidth
+# 밀도함수추정,hat(f(x)) = (1/(n*h))*[x와 같은 구간에 있는 xi들의 개수] 
+x11()
+hist(duration, freq=F)
+## kernel, k(X)>0
+# 밀도함수추정,hat(f(x))=(1/n){sigam(i in 1:n)}(1/h)K((X-xi)/h) 
+# kernel의 종류, Uniform, Gaussian, Triangle 등
+## Uniform kernel
+# K(x) = ifelse( abs(x)<=1 ,1/2 ,0 )
+duration[abs( (duration-1.2)/0.25 ) <= 1]
+duration[abs( (duration-2.3)/0.25 ) <= 1]
+duration[abs( (duration-4.0)/0.25 ) <= 1]
+length( duration[abs( (duration-1.2)/0.25 ) <= 1] )/299/0.25/2
+length( duration[abs( (duration-2.3)/0.25 ) <= 1] )/299/0.25/2
+length( duration[abs( (duration-4.0)/0.25 ) <= 1] )/299/0.25/2
+## Normal(Gaussian) Kernel
+# k(x) = norm분포
+# h = 0.9*min(s,LQR/1.35)*n^(-1/5)
+h <- 0.25
+sum( dnorm( (1.2-duration)/h ) /h)/299
+sum( dnorm( (2.3-duration)/h ) /h)/299
+sum( dnorm( (4.0-duration)/h ) /h)/299
+## density
+x11()
+par(mfrow=c(1,2))
+plot(density(duration))
+hist(duration, freq=F, xlim=c(0,6))
+lines(density(duration),lty=2)
+
+
+
+### 이변량 밀도 추정
+# hat.f(x,y) = (1/n)sum{(1/h1)K((X-Xi)/h1)(1/h2)K((Y-Yi)/h2)}
+## library(MASS) - kde2d()
+library(MASS)
+attach(geyser)
+density1 <- kde2d(waiting, duration, n=25)
+density2 <- kde2d(waiting, duration, n=100)
+density3 <- kde2d(waiting, duration, n=400)
+x11()
+par(mfrow=c(1,2))
+image(density1, xlab="waiting", ylab="duration")
+image(density3, xlab="waiting", ylab="duration")
+## bag plot
+# library(aplpack) - bag plot
+# 중간점(M), 보자기경계(bag hull) : 자료의 50%를 담아내는
+# 외부점(outlier), 외곽경계(loop hull) : 자료의 내부점을 담아내는 가장 작은 다각형
+# 좌표점의 깊이(depth) : p가 경계인 반평면에 포함된 자료점의 최소 개수
+# Dk : 깊이가 k이상인 좌표점들의 집합
+# M(이변량 중간점) : 깊이가 가장 큰 좌표점 또는 그 영역의 무게중심
+# 울타리(fence) : 보자기의 3배 확장(중심은 M)
+# M - bag hull - loop hull - fence - outlier
+## geyser의 bagplot
+library(aplpack)
+x11()
+par(mfrow=c(1,1))
+bagplot(x=waiting, y=duration, data=geyser, show.whisker=F
+        , cex=1, xlab="waiting", ylab="duration")
+# show.whisker=F or T : M과 각 자료를 잇는 선의 유무 
+## 60종 자동차 중량과 배기량의 bag plot
+library(rpart)
+data(car.test.frame)
+str(car.test.frame)
+attach(car.test.frame)
+x11()
+par(mfrow=c(1,1))
+bagplot(x = Weight, y=Disp., show.whiskers = F, 
+        cex=1, xlab="Car weight", ylab="Displacement")
+
+
+
+### 조각별 선형회귀
+# 구간을 나눠서 다른 방법으로 선형회귀를 추정
+# f(X: B0, B1, r) = ifelse(x<=c, B0+B1*X, B0+B1*X+r(X-c))
+library(MASS)
+data(Cars93)
+attach(Cars93)
+x11()
+par(mfrow=c(1,2))
+plot(Weight, Price)
+log.Price <- log(Price, 10) # y의 값을 축소하기 위해
+plot(Weight, log.Price)
+## Cars93 - 조각별 선형회귀(lm)
+x11()
+par(mfrow=c(1,2))
+lm1<-lm(log.Price~Weight)
+plot(Weight, log.Price)
+abline(lm1$coef)
+abline(v=3000, lty=2)
+Weight3000<-(Weight-3000+abs(Weight-3000))/2
+lm2<-lm(log(Price,10)~Weight+Weight3000)
+plot(Weight, log.Price, ylim=c(0.8, 1.8))
+par(new=T)
+plot(sort(Weight), lm2$fit[order(Weight)], ylim=c(0.8,1.8), type="l"
+     , col="blue", xlab="", ylab="")
+## Cars93 - 조각별 최소중간제곱 추정(lms)
+x11()
+par(mfrow=c(1,2))
+lqs<-lqs(log.Price~Weight, method="lms")
+plot(Weight, log.Price)
+abline(v=3000, lty=2)
+Weight3000<-(Weight-3000+abs(Weight-3000))/2
+lqs2<-lqs(log(Price, 10)~Weight+Weight3000, method="lms")
+plot(Weight, log.Price, ylim=c(0.8,1.8))
+par(new=T)
+plot(lqs2$fit[order(Weight)]~sort(Weight), ylim=c(0.8,1.8),
+     type="l", col="blue", xlab="", ylab="")
+
+
+
+### 산점도 평활기 LOWESS
+# 특정 회귀모형을 설정하지 않고, 자동으로 적절한 회귀함수를 찾아주는 방법
+# 윈도우(window)와 가중최소제곱(weighted least squares)를 사용한다.
+# Si : i번째 윈도우={(Xi-k, Yi-k)~(Xi+k, Yi+k)}
+# 평활기 너비(2K+1), (Xi, Yi)를 중심으로 좌우측 k개 
+# 가중치: (Xi, Yi)에 가장 큰 가중치 W0, 멀어질수록 작아지는 가중치
+# f : 자료크기 대비 평활기 넓이의 비율, 디폴트값 = 2/3
+# f가 커지면 : 직선에 가까운 밋밋한 곡선(과소적합)
+# f가 작아지면 : 곡률이 큰 곡선이 된다.(과대적합)
+## Cars93 - Lowess 회귀
+x11()
+par(mfrow=c(1,2))
+s1<-lowess(log.Price~Weight)
+plot(Weight, log.Price, ylim=c(0.8,1.8))
+lines(s1, col="blue")
+s2<-lowess(log.Price~Weight, f=1/3)
+plot(Weight, log.Price, ylim=c(0.8,1.8))
+lines(s2, col="blue")
+
+
+
+
+```
+

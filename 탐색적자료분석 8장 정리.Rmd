@@ -1,0 +1,133 @@
+---
+title: "EDA 8장"
+author: "jinjewel"
+date: "2022-12-05"
+output: html_document
+---
+
+
+```{r cars}
+rm(list=ls())
+
+### 8장 시계열 자료의 탐색
+# 시간이 지남에 따라 발생 또는 관찰되는 자료
+# 특정 시점에서 관찰값은 자신의 과거 정보들에 의존하고 이들 간의 상관관계는 매우 높은 것이 일반적이다.
+# s : 신호, a : 잡음, x : 시점 t에 관측된 값, x = s + a
+
+# 시계열 자료 - 모의실험
+set.seed(1234)
+t <- seq(1:60)
+s <- sin((2*pi*t)/12) + sin((2*pi*t)/30) 
+a <- rnorm(60,0,1)
+x <- s + a
+x11()
+par(mfrow=c(3,1))
+plot(s, type="l", ylim=c(-3,3), xlab="", col="blue")
+plot(a, type="l", ylim=c(-3,3), xlab="", col="orange")
+plot(x, type="l", ylim=c(-3,3), xlab="", col="red")
+
+x11()
+par(mfrow=c(2,1))
+plot(x, type="l", ylim=c(-3,3), lty="dotted", main="x & s", xlab="t")
+lines(s)
+smooth.x <- smooth(x)
+plot(smooth.x, type="l", ylim=c(-3,3), main="x & hat(s)", xlab="t", ylab="", col="blue")
+lines(x, lty="dotted")
+# --------------------------------------------------왜 추정을 저기다 씌우는지
+
+# 시계열 평활 - smooting(3RS3R)
+x <- c(2.1, 9.8, 19.5, 22.5, 16.6, 16.1, 18.5, -3.4, 8.9, -25.2, -14, -0.4)
+smooth(x, kind="3")
+smooth(x, kind="3R")
+smooth(x, kind="3RSS")
+smooth(x, kind="3RS3R")
+
+# 사례분석 - 젖소의 체온
+# setwd("c://")
+Telemetric <- read.table("C:/Users/Jinseok Oh/Desktop/탐색적 자료분석/EDA 데이터 자료/Telemetric.txt",header=T)
+str(Telemetric)
+x11()
+plot(Telemetric$temperature, type="b", lty="dotted", ylim=c(45,95))
+# twiceit : 관측계열을 1차 평활한 뒤 사용 > x = s1 + s2 + a2, 최종신호: s1 + s2 , 최종잡음 : a2
+# 3Rs3R twiceit 기법 적용
+x11()
+plot(Telemetric$temperature, type="l", lty="dotted", ylim=c(45,95))
+par(new=T)
+plot(smooth(Telemetric$temperature, twiceit=T), type="l", col="blue", ylim=c(45,90), ylab="")
+# 3RS3R 기법 적용
+x11()
+plot(Telemetric$temperature, type="l", lty="dotted", ylim=c(45,95))
+par(new=T)
+plot(smooth(Telemetric$temperature, kind="3RS3R"), type="l", col="red", ylim=c(45,90), ylab="")
+
+# 계절형 시계열의 분해
+# 계절형 시계열 : 관측계열이 월,분기와 갗은 계절성을 가지는 경우(강수량, 기온, 수입 등)
+# x(관측계열) = T(추세계열) + S(계절계열) + a(잡음)
+# decompose() 함수로 T, S, a를 분리
+# 예시2) 월별 수출액 - 추세
+Export <- read.table("C:/Users/Jinseok Oh/Desktop/탐색적 자료분석/EDA 데이터 자료/Export_1988.txt",header=T)
+Series <- ts(Export$Series/1000, start=c(1988,1),frequency=12)
+Log.Series <- log(Series)
+x11()
+par(mfrow=c(2,1))
+plot(Series)
+plot(Log.Series,ylim=c(8.5,10.0))
+# 분해법 수행 결과
+decompose.out <- decompose(Log.Series)
+names(decompose.out)
+# T(추세), a(잡음)의 추출값
+head(round(decompose.out$trend, 4), 12)
+head(round(decompose.out$random, 4), 12)
+# S(계절성 계열) 추출값
+round(decompose.out$figure, 4)
+head(round(decompose.out$seasonal, 4), 24)
+x11()
+plot(decompose.out)
+# hat(x) (계절성 조절 계열) = X - S = T + a
+Adjusted.Log <- Log.Series-decompose.out$seasonal
+Adjusted <- exp(Log.Series-decompose.out$seasonal)
+Adj.Series <- ts(Adjusted, start=c(1988,1),frequency=12)
+x11()
+par(mfrow=c(2,1))
+plot(Log.Series, ylim=c(8.5, 10.0))
+plot(Adjusted.Log, ylim=c(8.5, 10.0))
+plot(Series,ylim=c(5000,25000))
+plot(Adj.Series,ylim=c(5000,25000))
+
+# 자기 상관
+# 자기 상관 계수 : xi와 x(i-1)사이의 상관성을 표현
+# 자기 상관 함수(ACF) : 자가상관계수 r를 시차 k의 함수로 분석
+# rk 식 외우기
+library(MASS)
+data(geyser)
+str(geyser)
+attach(geyser)
+x11()
+par(mfrow=c(2,2))
+round(acf(waiting)$acf[1:5], 3)
+round(acf(duration)$acf[1:5], 3)
+acf(waiting)
+acf(duration)
+
+# 다중시계열
+x11()
+plot(duration~waiting)
+# 다중시계열 - 교차상관함수
+# 교차상관함수(CCF)
+# ck 식 외우기
+x11()
+ccf(waiting, duration)
+attach(ccf(waiting, duration))
+round(cbind(ccf(waiting, duration)$lag, ccf(waiting, duration)$acf), 3)[19:25,]
+
+# 플랏
+x11()
+par(mfrow=c(1,2))
+plot(waiting, duration)
+waiting.1 <- c(waiting[2:299], NA)
+plot(duration, waiting.1)
+# plot(waiting.1, duration)
+
+
+
+```

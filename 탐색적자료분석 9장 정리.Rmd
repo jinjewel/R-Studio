@@ -1,0 +1,285 @@
+---
+title: "EDA 9장"
+author: "jinjewel"
+date: "2022-12-05"
+output: html_document
+---
+
+
+```{r cars}
+rm(list=ls())
+
+### 9장 로버스트 선형회귀
+
+# ## 9.1 상관분석
+# # 상관분석 : 두 변수 사이의 선형적 연관성에 관한 추론
+# # 상관계수(로우) = Corr(x,y) = cov(x,y)/sqrt(Var(x)*Var(y)) 식 외우기
+# # 표본상관계수(r) =  hat(로우) 식 외우기, 1: 강한 상관관계, 0: 약한 상관관계
+# # 상관관계에 유무에 관한 검정
+# # H0 : 로우 = 0, 검정통계량 T = (sqrt(n-2)*r)/sqrt(1-r^2) ~ T(n-2)
+# # 유의수준 알파에 대한 기각역 = t알파(n-2)
+# possum <- read.table("C:/Users/Jinseok Oh/Desktop/탐색적 자료분석/EDA 데이터 자료/possum.txt", header=T)
+# x11()
+# par(mfrow=c(1,1))
+# plot(possum$totalL, possum$headL, xlab="totalL", ylab="headL")
+# # corr
+# cor(possum$headL, possum$totalL)
+# cor.test(possum$headL, possum$totalL)
+
+
+
+### 9.2 회귀분석
+## 회귀분석 : 반응변수와 설명변수 사이의 함수 관계를 규명
+# x: 독립변수, 설명변수, y: 종속변수, 반응변수
+# 단순회귀모형 : 설명변수가 1개인 회귀모형
+# 다중회귀모형 : 설명변수가 2개이상 회귀모형
+# 선형회귀모형 : 설명변수와 반응변수 사이의 직선관계가 있는 모형
+# 종속변수가 연속형인 경우 독립변수와 종속변수 사이의 관계(영향력)를 알고, 
+# 독립변수를 가지고 종속변수를 예측하고자 선형회귀분석을 시행한다.
+
+
+
+### 9.3 단순선형 회귀분석
+# ## 단순선형회귀모형
+# # Y(종속, 반응) = b1(기울기) + b0(y절편)*X(독립, 설명) + e(오차), e ~ N(0, 시그마^2)
+# # 모회귀직선, 적합된 회귀직선, 잔차
+# # 단순선형회귀분석 추정방법 : 최소제곱법 
+# # SST(총제곱합) = SSE(오차제곱합) + SSR(회귀제곱합)
+# # 결정계수 R^2 = SSR/SST, MSE(추정분산) = Ve, MSR = Vr
+# fit <- lm(possum$totalL, possum$headL)
+# summary(fit)
+# anova(fit)
+
+
+
+### 9.4 잔차분석
+# 잔차 분석 : 잔차를 이용하여 모형의 가정에 대해 검토하는 것
+# 잔차의 qqnorm, hist 사용가능
+## 선형회귀모형의 주요가정
+## 정규성 
+# 오차의 분포는 정규분포를 따른다
+## 독립성
+# 종속변수의 변화에 따라 오차항이 어떤 반응(패턴, 값의 변동)을 보이면 안됨
+# 잔차가 다른 잔차에 영향을 주면 안됨
+## 등분산성
+#오차의 분산은 모두 같다.
+## 선형성
+# 독립변수와 종속변수의 변화는 일정해야하며, 선형관계을 진단한다.
+
+
+
+### 9.5 로버스트 선형회귀(M, LMS, LTS, LMS/LTS 주정방법)
+## 최소제곱법
+# 예시1
+set.seed(123)
+x <- seq(1,10)
+e <- rnorm(10,0,1)
+y <- 2.5+0.5*x+e
+y[10]<- -10 # 특이값
+x11()
+plot(x,y,ylim=c(-10,10))
+
+## 적합회귀식(hat(y) = 2.5 + 0.5*x, 잔차(E) = y - hat(y))
+yhat <- 2.5 + 0.5*x ; yhat
+r <- round(y - yhat, 1); r
+r2 <- round(r^2, 2); r2
+sum(r2)
+x11()
+plot(x, y, ylim=c(-10, 10))
+abline(2.5, 0.5, col="red")
+
+## LS 추정 회귀식(hat(y) = 6.5 + 0.6*x, 잔차(E) = y - hat(y))
+library(MASS)
+m0 <- lm(y~x); m0
+m0$fitted.values
+m0$residuals
+m0$residuals^2
+sum(m0$residuals^2)
+m0$coef
+x11()
+plot(x, y, ylim=c(-10, 10))
+abline(m0$coef, col="blue")
+yhat_lm <- m0$coef[1] + m0$coef[2]*x ; yhat_lm # yhat_lm <- 6.5 - 0.6*x
+r_lm <- round(y - yhat_lm, 1); r_lm
+r_lm2 <- round(r_lm^2, 2) ; r_lm2
+sum(r_lm2)
+
+## 전통적인 추정방법
+# outlier(이상치, 특이값)에 대하여 로버스트 하지 못함에 따라 로버스트적인 대안
+# 로버스트 선형회귀 : M-추정, LMS, LTS
+m0 <- lm(y~x)
+m1 <- rlm(y~x)
+m2 <- lqs(y~x)
+x11()
+plot(y~x,ylim=c(-10,10))
+abline(m0$coef)
+abline(m1$coef, lty="dotted", col="blue")
+abline(m2$coef, lty="dotted", col="red" )
+legend("bottomleft", 
+       legend = c("LE","M-reg","LMS/LTS"),
+       lty=c("solid","dotted","dotted"),
+       col=c("blue","black","red"), bty="n")
+
+## M-추정 (rlm 사용)
+# z^2 (-1<z<1), c*(2*abs(z)-c)) (O.W)
+psi.0 <- function(z) {z^2}
+psi.1 <- function(z) {
+  c <- 1.345 
+  ifelse(abs(z)<c, z^2, c*(2*abs(z)-c))
+}
+z <- seq(-6,6,0.1)
+y.0 <- psi.0(z)
+y.1 <- psi.1(z)
+x11()
+par(mfrow=c(1,2))
+plot(y.0 ~ z, type="l", ylim=c(0,30), ylab="psi.0(z)")
+plot(y.1 ~ z, type="l", ylim=c(0,30), ylab="psi.1(z)")
+par(new=T)
+plot(y.0 ~ z, type="l", lty="dotted", ylim=c(0,30), ylab="")
+
+## M-추정, 분산의 추정(MAD)
+# 가정: 표본이 (X1,X2,...)라 할때 평균=0, 분산=시그마^2, 중앙값=m
+# MAD ~시그마 =  median(abs(X1-m), abs(X2-m), ... , abs(Xn-m)) / 0.675 
+# 0.675 -> 정규분포에서 abs(z)의 50% 분위수
+## M-set
+# 적합회귀식(hat(y) = 2.5 + 0.5*x)
+c = 1.345
+r21 <- round(ifelse(abs(r)<c, r^2, c*(2*abs(r)-c)), 2)
+r21
+sum(r21)
+
+## M-추정회귀식 (hat(y) = 3,76 + 0.19*x)
+m1 <- rlm(y~x); m1
+m1$k2 # 추정표준편차
+x11()
+par(mfrow=c(1,1))
+plot(x, y, ylim=c(-10,10))
+abline(m1$coef[1], m1$coef[2], col="red")
+
+## LMS 추정(최소중앙제곱, lqs(,method="lms") 사용)
+# (hat(y) = 2.5 + 0.5*x)
+set.seed(1234)
+x2 <- seq(1, 10)
+e <- rnorm(10,0,1)
+y2 <- 2.5 + 0.5*x + e
+x2[10] <- 100 ; x2
+y2[10] <- -100 ; y2
+x11()
+par(mfrow=c(1,1))
+plot(x2, y2, ylim=c(-100,10))
+y2 <- round(y2, 1) ; y2
+y2hat <- 2.5 + 0.5*x ; y2hat
+res <- round(y - y2hat, 1) ; res
+res2 <- res^2 ; res2
+sort(res2)
+median(res2)
+# M-추정 회귀식
+m11 <- rlm(y2~x2) ; m11
+# LMS- 추정 회귀식
+m22 <- lqs(y2~x2, method="lms") ; m22
+# M-회귀식과 LMS-회귀식 비교
+x11()
+par(mfrow=c(1,2))
+plot(x2, y2, ylim=c(-100,10))
+abline(m11$coef, lty="dotted", col="blue")
+abline(m22$coef, col="red")
+legend("bottomleft",
+       legend=c("M-reg","LMS"),
+       col=c("blue","red"),
+       lty=c("dotted","solid"))
+plot(x2, y2, xlim=c(0,10), ylim=c(0,10))
+abline(m11$coef, lty="dotted", col="blue")
+abline(m22$coef, col="red")
+legend("topright",
+       legend=c("M-reg","LMS"),
+       col=c("blue","red"),
+       lty=c("dotted","solid"))
+
+## LTS 추정(최소절삭제곱, lqs(,method="lts) 사용)
+# q의 디폴트 값 : n의 약 50%에 해당하느 q = [n/2] + [(p+1)/2], p는 설명변수의 수
+# q를 약 75%를 사용한다 할때추정치의 정확도가 높아짐
+sort(res2)
+sum(sort(res2)[1:5])
+m2a <- lqs(y2~x2, method="lts") ; m2a
+m2b <- lqs(y2~x2, method="lts", quantile=8) ; m2b
+x11()
+par(mfrow=c(1,2))
+plot(x, y, xlim=c(0,10), ylim=c(0, 10), main="Default")
+abline(m2a$coef, lty="dotted", col="blue")
+plot(x, y, xlim=c(0,10), ylim=c(0, 10), main="quantile option")
+abline(m2b$coef, col="red")
+
+## LMS 및 LTS 추정방법
+# LMS : H(r1^2, r2^2,...,rn^2) = median(r1^2, r2^2,...,rn^2)
+# LTS : H(r1^2, r2^2,...,rn^2) = 부분합(i=1~q)(ri^2)
+# 를 최소화하는 베타0(절편) 과 베타1(기울기)를 찾는 과정이다.
+# 저음에는 베타0 = 표본평균, 베타1 = 0 로 가정하고 차근차근 비교하며 정해진
+# 반복수를 진행하고, 각 진행에서 기존에 H값보다 작으면 새롭게 채택하는 방법이다.
+
+## 로버스트 선형회귀 비교(손실 분량 자료)
+# Air.flow(X) 과 stack.loss(Y)에 대하여 LS, M-회귀, LMS, LTS(q=11)적합진행
+data(stackloss) 
+attach(stackloss)
+str(stackloss)
+m1 <- lm(stack.loss~Air.Flow) ; m1 # (-44.13, 1.02)
+m2 <- rlm(stack.loss~Air.Flow) ; m2 # (-45.01, 1.03, 1.91)
+m3 <- lqs(stack.loss~Air.Flow, method="lms") ; m3 # (-41.2, 0.96, 1.21, 1.38)
+m4 <- lqs(stack.loss~Air.Flow, method="lts", quantile=11) ; m4 # (-33.66, 0.83, 1.51, 1.58)
+r1 <- m1$residuals ; round(r1,1)
+r2 <- m2$residuals ; round(r2,1)
+r3 <- m3$residuals ; round(r3,1)
+r4 <- m4$residuals ; round(r4,1)
+rs10 <- (m1$residuals)^2 ; round(rs10, 2)
+rs20 <- (m2$residuals)^2 ; round(rs20, 2)
+rs30 <- (m3$residuals)^2 ; round(rs30, 2)
+rs40 <- (m4$residuals)^2 ; round(rs40, 2)
+# LS
+round(sum(rs10), 2)
+round(sum(rs20), 2)
+round(sum(rs30), 2)
+round(sum(rs40), 2)
+# LMS
+round(median(rs10), 2)
+round(median(rs20), 2)
+round(median(rs30), 2)
+round(median(rs40), 2)
+# LTS
+round(sum(sort(rs10)[1:11]), 2)
+round(sum(sort(rs20)[1:11]), 2)
+round(sum(sort(rs30)[1:11]), 2)
+round(sum(sort(rs40)[1:11]), 2)
+# Hubber's M-추정
+m1$k2
+m2$k2 # rlm()
+m3$k2
+m4$k2
+c <- 1.345 # *$k2
+rs11 <- ifelse(abs(r1)<c, r1^2, c*(2*abs(r1)-c)) ; round(rs11,2)
+rs21 <- ifelse(abs(r2)<c, r2^2, c*(2*abs(r2)-c)) ; round(rs21,2)
+rs31 <- ifelse(abs(r3)<c, r3^2, c*(2*abs(r3)-c)) ; round(rs31,2)
+rs41 <- ifelse(abs(r4)<c, r4^2, c*(2*abs(r4)-c)) ; round(rs41,2)
+# M (시그마 로우1(r))
+round(sum(rs11),2)
+round(sum(rs21),2)
+round(sum(rs31),2)
+round(sum(rs41),2)
+
+
+
+## 9.6 다중회귀분석
+# yi = 베타0 + 베타1*X11 + ... + 베타k*Xki + ei , i=1,...,n
+# 베타 : 회귀모수 , X(1~k)i : i번째 개체의 설명변수, y : 반응변수, e~N(0, 시그마^2)
+# 회귀계수 추정방법 (LS, M-회귀, LMS, LTS)
+data(stackloss) 
+attach(stackloss)
+str(stackloss)
+m11 <- lm(stack.loss~Air.Flow+Water.Temp+Acid.Conc.); m11
+m22 <- rlm(stack.loss~Air.Flow+Water.Temp+Acid.Conc.); m22
+m33 <- lqs(stack.loss~Air.Flow+Water.Temp+Acid.Conc.,method="lqs"); m33
+m44 <- lqs(stack.loss~Air.Flow+Water.Temp+Acid.Conc.,method="lts", quantile=16); m44 # 디폴트q= 12
+x11()
+par(mfrow=c(1,1))
+boxplot(m11$resid, m22$resid, m33$resid, m44$resid, ylab="residuals", xlab="LS-M-LMS-LTS Regression")
+
+```
+
